@@ -1,0 +1,4 @@
+id: 24D52_26P32
+scheme: two_photon
+ladder: [[6, S, 1/2], [6, P, 3/2], [24, D, 5/2], [26, P, 3/2]]
+expected_thz_ghz: 561.644629

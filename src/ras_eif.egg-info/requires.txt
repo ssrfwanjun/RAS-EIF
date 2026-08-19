@@ -1,0 +1,8 @@
+ARC-Alkali-Rydberg-Calculator==3.10.2
+matplotlib>=3.8
+numpy>=1.24
+PyYAML>=6.0
+
+[dev]
+pytest>=8.0
+ruff>=0.6

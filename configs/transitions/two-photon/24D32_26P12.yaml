@@ -1,0 +1,46 @@
+# All states are physical labels, never positions in a sorted state array.
+id: 24D32_26P12
+ladder:
+  - [6, S, 1/2]
+  - [6, P, 3/2]
+  - [24, D, 3/2]
+  - [26, P, 1/2]
+expected_thz_ghz: 548.700
+figures: [Fig1, Fig3, Fig4a]
+
+# These values must be replaced by measured values before a quantitative run.
+# The configuration exists to make all model assumptions auditable.
+field_parameters:
+  probe:
+    intensity_w_m2: null
+    polarization: null
+    dephasing_rad_s: null
+  coupling:
+    intensity_w_m2: null
+    polarization: null
+    dephasing_rad_s: null
+  thz:
+    intensity_w_m2: null
+    polarization: null
+    detuning_rad_s: null
+    dephasing_rad_s: null
+
+# This reduced model is intended only to reproduce the visualization style of
+# the legacy scripts. The effective rates are not experimentally calibrated.
+# Omitted radiative channels are explicitly returned to the 6S reservoir, so
+# this file must not be used as a converged quantitative figure calculation.
+simulation:
+  state_space: {mode: cascade, n_min: 4, n_max: 26}
+  drives:
+    - lower: [6, S, 1/2]
+      upper: [6, P, 3/2]
+      effective_rate_s: 10e6
+    - lower: [6, P, 3/2]
+      upper: [24, D, 3/2]
+      effective_rate_s: 10e6
+    - lower: [24, D, 3/2]
+      upper: [26, P, 1/2]
+      effective_rate_s: 10e6
+      thz_only: true
+  wavelength_window_nm: [450.0, 650.0]
+  instrument_fwhm_nm: 0.04

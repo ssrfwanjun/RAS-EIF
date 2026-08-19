@@ -1,0 +1,13 @@
+id: 42P32_47D32
+scheme: three_photon
+ladder: [[6, S, 1/2], [6, P, 3/2], [7, S, 1/2], [42, P, 3/2], [47, D, 3/2]]
+expected_thz_ghz: 566.849250
+simulation:
+  state_space: {mode: cascade, n_min: 4, n_max: 47}
+  drives:
+    - {lower: [6, S, 1/2], upper: [6, P, 3/2], effective_rate_s: 1.0e6}
+    - {lower: [6, P, 3/2], upper: [7, S, 1/2], effective_rate_s: 1.0e6}
+    - {lower: [7, S, 1/2], upper: [42, P, 3/2], effective_rate_s: 1.0e6}
+    - {lower: [42, P, 3/2], upper: [47, D, 3/2], effective_rate_s: 1.0e6, thz_only: true}
+  wavelength_window_nm: [450.0, 650.0]
+  instrument_fwhm_nm: 0.04

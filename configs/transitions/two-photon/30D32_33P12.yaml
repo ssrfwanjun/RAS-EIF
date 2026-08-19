@@ -1,0 +1,4 @@
+id: 30D32_33P12
+scheme: two_photon
+ladder: [[6, S, 1/2], [6, P, 3/2], [30, D, 3/2], [33, P, 1/2]]
+expected_thz_ghz: 538.418157

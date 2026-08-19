@@ -1,0 +1,4 @@
+id: 39D52_45P32
+scheme: two_photon
+ladder: [[6, S, 1/2], [6, P, 3/2], [39, D, 5/2], [45, P, 3/2]]
+expected_thz_ghz: 549.165844

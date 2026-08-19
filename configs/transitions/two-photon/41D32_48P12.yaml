@@ -1,0 +1,4 @@
+id: 41D32_48P12
+scheme: two_photon
+ladder: [[6, S, 1/2], [6, P, 3/2], [41, D, 3/2], [48, P, 1/2]]
+expected_thz_ghz: 548.463199
