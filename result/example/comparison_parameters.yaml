@@ -1,0 +1,38 @@
+transition: 24D32_26P12
+config_path: configs/transitions/two-photon/24D32_26P12.yaml
+state_space:
+  mode: cascade
+  n_min: 4
+  n_max: 26
+radiative_baseline:
+  arc_temperature_k: 0.0
+  unresolved_channels: returned to the 6S1/2 ground-state reservoir
+  comparison_scope: only driven rates differ between models
+legacy_reference_rate_s: 1000000.0
+legacy_powers_mw:
+- 10.0
+- 10.0
+- 1.0
+effective_rate:
+  baseline_matching: first drive matched to legacy_reference_rate_s
+  dephasing_rad_s: 100000000.0
+  detuning_over_dephasing:
+  - 0.0
+  - 0.05
+  - 0.05
+  angular_factor:
+  - 1.0
+  - 0.98
+  - 0.98
+  derived_reference_intensity_w_m2: 0.5118629881111832
+  derived_intensities_w_m2:
+  - 0.5118629881111832
+  - 0.5118629881111832
+  - 0.05118629881111833
+  derived_reference_beam_area_m2: 0.01953647798779284
+dipoles_au:
+- 6.3337
+- 0.059584475630759526
+- 253.9196098905791
+arc_version: 3.10.2 (locked project dependency)
+not_experimental_calibration: true
