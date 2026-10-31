@@ -4,17 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
+from math import isfinite
 
 from .states import AtomicState
 
 
 @dataclass
 class ArcCesiumBackend:
-    """Cesium data access with ARC imported only when a calculation is requested."""
+    """Cesium data access with a declared blackbody-radiation temperature."""
 
     temperature_k: float = 0.0
 
     def __post_init__(self) -> None:
+        if not isfinite(self.temperature_k) or self.temperature_k < 0.0:
+            raise ValueError("temperature_k must be finite and non-negative")
         try:
             from arc import Cesium
         except ImportError as error:  # pragma: no cover - depends on local ARC installation
@@ -43,17 +46,35 @@ class ArcCesiumBackend:
         return abs(self.atom.getReducedMatrixElementJ(*self._args(first), *self._args(second)))
 
     def spontaneous_rate_s(self, upper: AtomicState, lower: AtomicState) -> float:
-        """Return the zero-temperature downward rate, or zero for non-E1 channels."""
+        """Return the configured-temperature downward rate, or zero for non-E1 channels."""
         if upper.l - lower.l not in (-1, 1):
             return 0.0
         frequency = self.transition_frequency_hz(lower, upper)
         if frequency <= 0:
             return 0.0
-        return self.atom.getTransitionRate(*self._args(upper), *self._args(lower), temperature=0.0)
+        return self.atom.getTransitionRate(
+            *self._args(upper), *self._args(lower), temperature=self.temperature_k
+        )
 
-    def spontaneous_lifetime_s(self, state: AtomicState) -> float:
-        """Return ARC's zero-temperature state lifetime in seconds."""
-        lifetime = self.atom.getStateLifetime(*self._args(state), temperature=0.0)
+    def spontaneous_lifetime_s(
+        self, state: AtomicState, include_levels_up_to: int | None = None
+    ) -> float:
+        """Return ARC's state lifetime at the configured temperature in seconds.
+
+        ARC requires an upper principal-quantum-number cutoff when blackbody
+        transitions are included.  The caller supplies that cutoff for a
+        declared model space; zero-temperature lifetimes do not need one.
+        """
+        include_levels = include_levels_up_to or 0
+        if self.temperature_k > 0.1 and include_levels <= state.n:
+            raise ValueError(
+                "include_levels_up_to must be above the state n at non-zero temperature"
+            )
+        lifetime = self.atom.getStateLifetime(
+            *self._args(state),
+            temperature=self.temperature_k,
+            includeLevelsUpTo=include_levels,
+        )
         if lifetime <= 0:
             raise ValueError(f"ARC returned a non-positive lifetime for {state.label}")
         return lifetime

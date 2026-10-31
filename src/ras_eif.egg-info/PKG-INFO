@@ -40,23 +40,34 @@ ARC 3.10.2 is a locked runtime dependency and is installed by this command.
 ## Validate a configuration
 
 ```bash
-uv run ras-eif validate configs/transitions/24D32_26P12.yaml
+uv run ras-eif validate configs/transitions/two-photon/24D32_26P12.yaml
 ```
 
 The command resolves each state by its explicit `(n, l, j)` quantum numbers and
 reports the ladder transition frequencies. It never depends on a sorted-array
 position.
 
+Validate all archived excitation channels with:
+
+```bash
+uv run ras-eif validate-all configs/transitions
+```
+
 ## Plot a qualitative EIF spectrum
 
 ```bash
-uv run ras-eif spectrum configs/transitions/24D32_26P12.yaml
+uv run ras-eif spectrum configs/transitions/two-photon/24D32_26P12.yaml
 ```
 
 This writes `result/generated/24D32_26P12_eif.png` with THz-off, THz-on, and
 THz-induced stick spectra, in the same form as the legacy scripts. Its rates
 are illustrative only; do not use this reduced-state figure as a publication
 calculation before completing state-space convergence and parameter calibration.
+
+All archived transition YAML files can be plotted. Files without a `simulation`
+section use documented default effective rates and a full cascade manifold from
+`n=4` through their highest ladder state; the CLI prints a warning whenever
+those qualitative defaults are used.
 
 ## Model conventions
 
@@ -83,6 +94,7 @@ ratios or Einstein coefficients.
 - `docs/MIGRATION.md`: known defects in the legacy scripts and migration rules.
 - `result/`: retained source artifacts. Files under `result/experiment/` need
   provenance review before being described as experimental data.
+- `code/`: legacy scripts.
 
 ## Before publishing regenerated spectra
 

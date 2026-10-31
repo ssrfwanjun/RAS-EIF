@@ -20,6 +20,7 @@ from .model import (
     spontaneous_rate_matrix,
 )
 from .spectrum import EmissionLine, bin_lines, emission_lines
+from .states import AtomicState
 from .steady_state import solve_steady_state
 
 
@@ -33,17 +34,28 @@ class EifSimulation:
     lines: tuple[EmissionLine, ...]
 
 
-def simulate_qualitative_eif(
-    config: TransitionConfig, backend: ArcCesiumBackend, thz_on: bool
-) -> EifSimulation:
-    """Calculate a qualitative EIF spectrum for one configured transition.
+@dataclass(frozen=True)
+class PreparedEifModel:
+    """Configuration-independent part of one qualitative EIF calculation.
 
-    Any spontaneous decay rate not represented by a state in `state_space` is
-    returned to the ground-state reservoir. This
-    prevents hidden population loss but also means the result is a visualization,
-    not a converged all-channel calculation.
+    Building the radiative manifold is the expensive part of the calculation.
+    Keeping it separate from the THz-on/off drive selection lets batch workflows
+    calculate both conditions from the same atomic model without rebuilding the
+    ARC-derived state space twice.
     """
-    simulation = simulation_for_plot(config)
+
+    states: tuple[AtomicState, ...]
+    frequencies_hz: np.ndarray
+    spontaneous_rates_s: np.ndarray
+    base_transfers: tuple[PopulationTransfer, ...]
+    indices: dict[AtomicState, int]
+    ground_index: int
+
+
+def prepare_qualitative_eif(
+    config: TransitionConfig, backend: ArcCesiumBackend
+) -> PreparedEifModel:
+    """Prepare the shared atomic/radiative model for one configured transition."""
     candidate_states = list(states_for_simulation(config))
     candidate_frequencies = atomic_frequencies_hz(candidate_states, backend)
     # ARC exposes some low-n numerical states below the Cs 6S ground state.
@@ -63,14 +75,18 @@ def simulate_qualitative_eif(
     if not set(config.ladder).issubset(states):
         raise ValueError("The configured ladder is not radiatively connected to the Cs 6S ground state")
     indices = resolve_state_indices(states)
+    ground_index = indices[config.ladder[0]]
     transfers = radiative_transfers(spontaneous)
-    ground = config.ladder[0]
-    ground_index = indices[ground]
+    lifetime_include_levels_up_to = (
+        max(state.n for state in states) + 1 if backend.temperature_k > 0.1 else None
+    )
 
     for upper, state in enumerate(states):
         if upper == ground_index:
             continue
-        total_rate = 1.0 / backend.spontaneous_lifetime_s(state)
+        total_rate = 1.0 / backend.spontaneous_lifetime_s(
+            state, include_levels_up_to=lifetime_include_levels_up_to
+        )
         represented_rate = spontaneous[upper, :].sum()
         unresolved_rate = max(total_rate - represented_rate, 0.0)
         if unresolved_rate:
@@ -78,39 +94,86 @@ def simulate_qualitative_eif(
                 PopulationTransfer(upper, ground_index, unresolved_rate, "unresolved radiative reservoir")
             )
 
+    return PreparedEifModel(
+        states=tuple(states),
+        frequencies_hz=frequencies,
+        spontaneous_rates_s=spontaneous,
+        base_transfers=tuple(transfers),
+        indices=indices,
+        ground_index=ground_index,
+    )
+
+
+def simulate_prepared_qualitative_eif(
+    config: TransitionConfig,
+    prepared: PreparedEifModel,
+    backend: ArcCesiumBackend,
+    thz_on: bool,
+    thz_intensity_scale: float = 1.0,
+) -> EifSimulation:
+    """Solve one THz condition using a previously prepared atomic model."""
+    if not np.isfinite(thz_intensity_scale) or thz_intensity_scale <= 0.0:
+        raise ValueError("thz_intensity_scale must be finite and positive")
+    simulation = simulation_for_plot(config)
+    transfers = list(prepared.base_transfers)
     for drive in simulation.drives:
         if drive.thz_only and not thz_on:
             continue
         if drive.effective_rate_s is not None:
-            lower = indices[drive.lower]
-            upper = indices[drive.upper]
+            lower = prepared.indices[drive.lower]
+            upper = prepared.indices[drive.upper]
+            rate = drive.effective_rate_s * (
+                thz_intensity_scale if drive.thz_only else 1.0
+            )
             transfers.extend(
                 (
-                    PopulationTransfer(lower, upper, drive.effective_rate_s, "effective driven absorption"),
-                    PopulationTransfer(upper, lower, drive.effective_rate_s, "effective driven emission"),
+                    PopulationTransfer(lower, upper, rate, "effective driven absorption"),
+                    PopulationTransfer(upper, lower, rate, "effective driven emission"),
                 )
             )
         else:
+            intensity = drive.intensity_w_m2 or 0.0
+            if drive.thz_only:
+                intensity *= thz_intensity_scale
             transfers.extend(
                 driven_pair_transfers(
-                    states,
+                    list(prepared.states),
                     drive.lower,
                     drive.upper,
                     backend,
-                    drive.intensity_w_m2 or 0.0,
+                    intensity,
                     drive.dephasing_rad_s or 0.0,
                     drive.detuning_rad_s,
                     drive.angular_factor,
                 )
             )
 
-    generator = build_generator(len(states), transfers)
+    generator = build_generator(len(prepared.states), transfers)
     populations = solve_steady_state(generator)
     return EifSimulation(
         populations=populations,
-        frequencies_hz=frequencies,
-        spontaneous_rates_s=spontaneous,
-        lines=tuple(emission_lines(populations, frequencies, spontaneous)),
+        frequencies_hz=prepared.frequencies_hz,
+        spontaneous_rates_s=prepared.spontaneous_rates_s,
+        lines=tuple(emission_lines(populations, prepared.frequencies_hz, prepared.spontaneous_rates_s)),
+    )
+
+
+def simulate_qualitative_eif(
+    config: TransitionConfig,
+    backend: ArcCesiumBackend,
+    thz_on: bool,
+    thz_intensity_scale: float = 1.0,
+) -> EifSimulation:
+    """Calculate a qualitative EIF spectrum for one configured transition.
+
+    Any spontaneous decay rate not represented by a state in `state_space` is
+    returned to the ground-state reservoir. This
+    prevents hidden population loss but also means the result is a visualization,
+    not a converged all-channel calculation.
+    """
+    prepared = prepare_qualitative_eif(config, backend)
+    return simulate_prepared_qualitative_eif(
+        config, prepared, backend, thz_on, thz_intensity_scale
     )
 
 

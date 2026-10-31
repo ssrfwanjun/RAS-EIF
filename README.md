@@ -55,6 +55,44 @@ section use documented default effective rates and a full cascade manifold from
 `n=4` through their highest ladder state; the CLI prints a warning whenever
 those qualitative defaults are used.
 
+## Generate all refactored simulation results
+
+To calculate every archived channel with the refactored model in both THz-off
+and THz-on conditions:
+
+```bash
+uv run python scripts/generate_new_simulation_results.py
+```
+
+This writes two MATLAB v5 files per channel under
+`result/simulation/new/two-photon/` and `result/simulation/new/three-photon/`,
+using the calibrated wavelength grid from `result/Frequency_Calibration.mat`.
+The output arrays contain wavelength in nm and unit-total-population emitted
+power in watts. The batch command uses ARC rates and state lifetimes at 300 K by
+default and scales THz-only drives by 10; pass `--temperature-k 0` for a
+zero-temperature run or `--thz-intensity-scale 1` for the unscaled THz run. The
+run manifest records the temperature, THz scale, input mode, and population
+normalization.
+
+Compare the overlapping archived and refactored channels with normalized
+shape metrics:
+
+```bash
+uv run python scripts/compare_old_new_simulation.py
+```
+
+The report is written to `result/simulation/new/comparison_old_vs_new.md` and
+the row-level metrics to `comparison_old_vs_new.csv`.
+
+Generate visual old/new overlays for every new channel with:
+
+```bash
+uv run python scripts/plot_old_new_simulation.py
+```
+
+This writes per-channel three-panel figures and condition-specific overview
+figures under `result/simulation/new/plots/`.
+
 ## Model conventions
 
 For a population column vector `p`, the raw rate generator is defined by

@@ -23,3 +23,5 @@ tests/test_model.py
 tests/test_spectrum.py
 tests/test_states.py
 tests/test_steady_state.py
+tests/test_transition_catalog.py
+tests/test_workflow_state_selection.py
